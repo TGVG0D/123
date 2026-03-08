@@ -1,32 +1,38 @@
-name: Google Remote Support (Código de 12 Dígitos)
+name: Google Remote Desktop (Funcional)
 
 on:
   workflow_dispatch:
+    inputs:
+      auth_code:
+        description: 'Cole o código aqui (Gerado em remotedesktop.google.com/headless)'
+        required: true
 
 jobs:
-  generate-code:
+  setup-crd:
     runs-on: windows-latest
     steps:
-      - name: 1. Instalar Host do Google
+      - name: 1. Baixar e Instalar
         run: |
           $msiPath = "$env:TEMP\chromeremotedesktophost.msi"
           Invoke-WebRequest -Uri "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi" -OutFile $msiPath
           Start-Process msiexec.exe -ArgumentList "/i", "$msiPath", "/quiet", "/norestart" -Wait
 
-      - name: 2. Gerar Código de 12 Dígitos
+      - name: 2. Autenticar (Usando seu Código)
         shell: powershell
         run: |
-          Write-Host "Solicitando código ao Google..."
-          # Comando que gera o código de suporte de 5 minutos
-          & "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe" --get-support-code
+          $code = "${{ github.event.inputs.auth_code }}"
+          # Comando oficial para parear com sua conta Google
+          & "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe" `
+          --code="$code" `
+          --redirect-url="https://remotedesktop.google.com/_/oauthredirect" `
+          --name="GitHub-PC" `
+          --pin=123456
           
-          Write-Host "------------------------------------------------------------"
-          Write-Host "AGUARDE ALGUNS SEGUNDOS E OLHE O LOG ACIMA"
-          Write-Host "O código aparecerá como: 'Suporte: XXXX XXXX XXXX'"
-          Write-Host "------------------------------------------------------------"
+          Write-Host "---------------------------------------------------"
+          Write-Host "SUCESSO! O PC aparecerá na lista 'MEUS COMPUTADORES'."
+          Write-Host "Use o PIN: 123456"
+          Write-Host "---------------------------------------------------"
 
-      - name: 3. Manter Sessão Aberta
+      - name: 3. Manter Conexão
         run: |
-          # Mantém o Windows rodando para você conseguir conectar
-          while ($true) { Start-Sleep -Seconds 60 }
-
+          while($true) { Start-Sleep -Seconds 300 }
