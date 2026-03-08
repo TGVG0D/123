@@ -1,0 +1,40 @@
+name: Google Remote Desktop Final
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-crd:
+    runs-on: windows-latest
+    steps:
+      - name: 1. Baixar e Instalar Host
+        run: |
+          $msiPath = "$env:TEMP\chromeremotedesktophost.msi"
+          # Baixa o instalador oficial do Google
+          Invoke-WebRequest -Uri "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi" -OutFile $msiPath
+          # Instala silenciosamente
+          Start-Process msiexec.exe -ArgumentList "/i", "$msiPath", "/quiet", "/norestart" -Wait
+
+      - name: 2. Autenticar e Iniciar Host
+        shell: powershell
+        run: |
+          # O seu comando ajustado com PIN (123456) e Nome Fixo
+          & "${Env:PROGRAMFILES(X86)}\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe" `
+          --code="4/0AfrIepBGAxifFOZtIJVyIT6FALNXzjfncg-65XeFdOtqGasdKdKpSz-KCJOmDvmh78V83g" `
+          --redirect-url="https://remotedesktop.google.com/_/oauthredirect" `
+          --name="GitHub-PC" `
+          --pin=123456
+
+      - name: 3. Manter Conexão Ativa
+        run: |
+          Write-Host "---------------------------------------------------"
+          Write-Host "PC ONLINE! Procure por 'GitHub-PC' no seu celular."
+          Write-Host "Use o PIN: 123456"
+          Write-Host "---------------------------------------------------"
+          # Loop para o GitHub não fechar a máquina (limite de 6 horas)
+          $count = 0
+          while ($count -lt 72) {
+            Write-Host "Status: Conectado - $(Get-Date)"
+            Start-Sleep -Seconds 300
+            $count++
+          }
