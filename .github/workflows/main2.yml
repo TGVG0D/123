@@ -1,38 +1,59 @@
-name: Google Remote Desktop (Funcional)
+name: Google Remote Desktop (Definitivo)
 
 on:
   workflow_dispatch:
     inputs:
       auth_code:
-        description: 'Cole o código aqui (Gerado em remotedesktop.google.com/headless)'
+        description: 'Cole o comando do Google ou apenas o código (4/...)'
         required: true
 
 jobs:
   setup-crd:
     runs-on: windows-latest
     steps:
-      - name: 1. Baixar e Instalar
+      - name: 1. Baixar e Instalar Host do Google
         run: |
           $msiPath = "$env:TEMP\chromeremotedesktophost.msi"
+          # Baixa a versão mais recente
           Invoke-WebRequest -Uri "https://dl.google.com/edgedl/chrome-remote-desktop/chromeremotedesktophost.msi" -OutFile $msiPath
+          # Instalação silenciosa
           Start-Process msiexec.exe -ArgumentList "/i", "$msiPath", "/quiet", "/norestart" -Wait
 
-      - name: 2. Autenticar (Usando seu Código)
+      - name: 2. Autenticar e Iniciar (Limpeza Automática)
         shell: powershell
         run: |
-          $code = "${{ github.event.inputs.auth_code }}"
-          # Comando oficial para parear com sua conta Google
-          & "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe" `
-          --code="$code" `
-          --redirect-url="https://remotedesktop.google.com/_/oauthredirect" `
-          --name="GitHub-PC" `
-          --pin=123456
+          $userInput = "${{ github.event.inputs.auth_code }}"
           
+          # TRATAMENTO DE ERRO: Se o usuário colou o comando inteiro, extraímos apenas o código entre aspas
+          if ($userInput -match '--code="([^"]+)"') {
+              $pureCode = $matches[1]
+          } elseif ($userInput -match 'code=([^ ]+)') {
+              $pureCode = $matches[1]
+          } else {
+              $pureCode = $userInput.Trim()
+          }
+
+          Write-Host "Configurando o Host com o código extraído..."
+
+          # Executa o comando oficial
+          & "C:\Program Files (x86)\Google\Chrome Remote Desktop\CurrentVersion\remoting_start_host.exe" `
+            --code="$pureCode" `
+            --redirect-url="https://remotedesktop.google.com/_/oauthredirect" `
+            --name="GitHub-PC" `
+            --pin=123456
+
           Write-Host "---------------------------------------------------"
-          Write-Host "SUCESSO! O PC aparecerá na lista 'MEUS COMPUTADORES'."
+          Write-Host "SUCESSO! O PC 'GitHub-PC' aparecerá no seu celular."
           Write-Host "Use o PIN: 123456"
           Write-Host "---------------------------------------------------"
 
-      - name: 3. Manter Conexão
+      - name: 3. Manter Conexão (Loop Infinito)
         run: |
-          while($true) { Start-Sleep -Seconds 300 }
+          # Mantém o runner vivo por até 6 horas
+          $count = 0
+          while ($count -lt 72) {
+            $time = Get-Date -Format "HH:mm:ss"
+            Write-Host "[$time] Runner Ativo. Conecte-se pelo celular agora!"
+            Start-Sleep -Seconds 300
+            $count++
+          }
